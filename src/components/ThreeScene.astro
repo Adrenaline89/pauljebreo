@@ -1,61 +1,146 @@
 ---
-import { onMount } from "solid-js";
-
-onMount(() => {
-  import("../scripts/threeScene.js").then((module) => module.initThreeScene());
-});
+// No frontmatter needed for this component
 ---
 
-<div id="three-container" class="fixed top-0 left-0 w-full h-full -z-10"></div>
+<div id="three-container"></div>
 
 <script>
   import * as THREE from 'three';
 
-  // Initialize the scene
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(window.devicePixelRatio);
-  document.getElementById('three-container').appendChild(renderer.domElement);
+  // Wait for the DOM to be fully loaded
+  document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('three-container');
+    if (!container) {
+      console.error('Could not find three-container element');
+      return;
+    }
 
-  // Add some elements to the scene (example: particles)
-  const particlesGeometry = new THREE.BufferGeometry();
-  const particlesCount = 5000;
-  
-  const posArray = new Float32Array(particlesCount * 3);
-  for(let i = 0; i < particlesCount * 3; i++) {
-    posArray[i] = (Math.random() - 0.5) * 5;
-  }
-  
-  particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-  
-  const particlesMaterial = new THREE.PointsMaterial({
-    size: 0.005,
-    color: 0x2337ff
-  });
-  
-  const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
-  scene.add(particlesMesh);
-
-  // Position camera
-  camera.position.z = 2;
-
-  // Handle window resize
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
+    // Initialize the scene
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x001e38); // Dark blue background
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    
     renderer.setSize(window.innerWidth, window.innerHeight);
-  });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
 
-  // Animation loop
-  function animate() {
-    requestAnimationFrame(animate);
-    particlesMesh.rotation.x += 0.0005;
-    particlesMesh.rotation.y += 0.0005;
-    renderer.render(scene, camera);
-  }
-  
-  animate();
+    // Create a simpler flag using standard materials instead of shaders
+    // Double the size (from 7x4 to 14x8)
+    const flagWidth = 14;
+    const flagHeight = 8;
+    const flagGeometry = new THREE.PlaneGeometry(flagWidth, flagHeight, 50, 30);
+    
+    // Use direct URL to flag texture to ensure it loads
+    const textureLoader = new THREE.TextureLoader();
+    const flagTextureUrl = 'https://upload.wikimedia.org/wikipedia/en/thumb/a/a4/Flag_of_the_United_States.svg/1920px-Flag_of_the_United_States.svg.png';
+    
+    // Add error handling and logging for texture loading
+    console.log("Loading flag texture from:", flagTextureUrl);
+    
+    textureLoader.load(
+      flagTextureUrl, 
+      // Success callback
+      (texture) => {
+        console.log("Flag texture loaded successfully");
+        flagMaterial.map = texture;
+        flagMaterial.needsUpdate = true;
+      },
+      // Progress callback
+      undefined,
+      // Error callback
+      (error) => {
+        console.error("Error loading flag texture:", error);
+        // Use a solid color as fallback
+        flagMaterial.color.set(0x3c3b6e); // Navy blue as fallback
+      }
+    );
+
+    const flagMaterial = new THREE.MeshStandardMaterial({
+      side: THREE.DoubleSide,
+      color: 0xffffff, // Will be replaced by texture when loaded
+      roughness: 0.5,
+      metalness: 0.1,
+    });
+    
+    const flag = new THREE.Mesh(flagGeometry, flagMaterial);
+
+    // Position flag at center of scene, facing camera directly
+    flag.position.set(0, 0, 0);
+    scene.add(flag);
+
+    // Add ambient light
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambientLight);
+    
+    // Add directional light (like sun)
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    directionalLight.position.set(0, 0, 5); // Light from camera direction
+    scene.add(directionalLight);
+
+    // Add a subtle point light for highlights
+    const pointLight = new THREE.PointLight(0xffffff, 0.7, 30);
+    pointLight.position.set(0, 0, 10);
+    scene.add(pointLight);
+
+    // Position camera directly in front of flag
+    camera.position.set(0, 0, 20);
+    camera.lookAt(0, 0, 0);
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Animation loop
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      const elapsedTime = clock.getElapsedTime();
+      
+      // Animate flag waves without shaders (more reliable)
+      const vertices = flagGeometry.attributes.position.array;
+      for (let i = 0; i < vertices.length; i += 3) {
+        const x = vertices[i];
+        const y = vertices[i+1];
+        
+        // Calculate wave effect
+        const waveStrength = 0.6; // Consistent wave across the flag
+        
+        // Apply multiple wave frequencies for realistic movement
+        const wave1 = Math.sin(x * 0.5 + elapsedTime * 1.5) * 0.3 * waveStrength;
+        const wave2 = Math.sin(x * 0.8 + y * 1.0 + elapsedTime * 2.0) * 0.2 * waveStrength;
+        
+        // Apply to z-coordinate for waving effect
+        vertices[i+2] = wave1 + wave2;
+      }
+      
+      // Flag geometry needs to be updated
+      flagGeometry.attributes.position.needsUpdate = true;
+      
+      // Very subtle movement of the flag position for more natural effect
+      flag.position.y = Math.sin(elapsedTime * 0.3) * 0.1;
+      
+      renderer.render(scene, camera);
+    }
+    
+    animate();
+    
+    // Debug helper
+    console.log("Three.js scene initialized with flag");
+  });
 </script>
+
+<style>
+  #three-container {
+    width: 100%;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: -1;
+  }
+</style>
