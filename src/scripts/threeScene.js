@@ -37,3 +37,7 @@ export function initThreeScene() {
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  initThreeScene();
+});
