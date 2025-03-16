@@ -27,8 +27,8 @@
 
     // Create a simpler flag using standard materials instead of shaders
     // Double the size (from 7x4 to 14x8)
-    const flagWidth = 14;
-    const flagHeight = 8;
+    const flagWidth = 15;
+    const flagHeight = 7;
     const flagGeometry = new THREE.PlaneGeometry(flagWidth, flagHeight, 50, 30);
     
     // Use direct URL to flag texture to ensure it loads
@@ -84,7 +84,7 @@
     scene.add(pointLight);
 
     // Position camera directly in front of flag
-    camera.position.set(0, 0, 5);
+    camera.position.set(0, 0, 6);
     camera.lookAt(0, 0, 0);
 
     // Handle window resize
