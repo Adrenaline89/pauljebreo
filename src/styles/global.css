@@ -149,6 +149,19 @@ hr {
 	}
 }
 
+@media (max-width: 1023px) {
+  main {
+    margin-left: 25%; /* Reduced margin for mobile/tablet */
+  }
+}
+
+@media (max-width: 768px) {
+  main {
+    margin-left: auto; /* Center on small screens */
+    margin-right: auto;
+  }
+}
+
 .sr-only {
 	border: 0;
 	padding: 0;
